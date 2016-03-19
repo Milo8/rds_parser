@@ -7,11 +7,11 @@
 % version.
 
 function resultaat = syndrome(loper, data, check)
-resultaat = [0 0 0 0 0 0 0 0 0 0];
-chunk = data(loper: loper+25);
-for bit_check = 1:26
+resultaat = [0 0 0 0 0 0 0 0 0 0];   % wektor zawieraj¹cy wynikowy syndrom
+chunk = data(loper: loper+25);       % 26 bitowy wektor bloku RDS
+for bit_check = 1:26                 % pêtla mno¿n¹ca y*H   
    if (chunk(bit_check))
-      resultaat = xor(resultaat, check(bit_check,:));
+      resultaat = xor(resultaat, check(bit_check,:)); 
    end
 end
 

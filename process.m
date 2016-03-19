@@ -31,8 +31,8 @@
 % 20. Traffic Programme Identification(TP)   line 71
 
 
-function [naam, text1, text2,i,AF,N, Hour, Minutes,LocalTimeOffset,Y,M,D,PI,PTY,Traffic,MS,DI,Country] = process(loper, data, naam, text1,text2,i,AF,N,Hour, ...
-                                                                                             Minutes,LocalTimeOffset,Y,M,D,PI,PTY,Traffic,MS,DI,Country)
+function [naam, text1, text2,i,AF,N, Hour, Minutes,LocalTimeOffset,Y,M,D,PI,PTY,Traffic,MS,DI,Country,Groups] = process(loper, data, naam, text1,text2,i,AF,N,Hour, ...
+                                                                                             Minutes,LocalTimeOffset,Y,M,D,PI,PTY,Traffic,MS,DI,Country,Groups)
 % Fetch data types
 
 blockA = data(loper    : loper+25);
@@ -79,8 +79,9 @@ if (type(1:4) == [0 0 0 0])         % We have a group 0A or 0B Basic tuning and 
     else
         MS = 'Speech';
     end
-   %disp(PI);
+    
    if type(5) == 0      % Group 0A   
+       Groups(1)= Groups(1) + 1;
        % Get alternative frequency number 
        alter_freq_num_1 = vbin2dec(blockC(1:8));
        alter_freq_num_2 = vbin2dec(blockC(9:16));
@@ -88,7 +89,9 @@ if (type(1:4) == [0 0 0 0])         % We have a group 0A or 0B Basic tuning and 
        [AF, i, N ] = locate_AF(AF,alter_freq_num_1, alter_freq_num_2, i, N);
         %disp(AF);
    end
-   
+   if type(5) == 1
+       Groups(2)= Groups(2) + 1;
+   end
    % Get name segment address code
    seg_addr = blockB(15:16);
    % Get the chars
@@ -101,22 +104,23 @@ if (type(1:4) == [0 0 0 0])         % We have a group 0A or 0B Basic tuning and 
    % And put'em in the name-string
    if seg_addr == [ 0 0 ]
       naam(1:2) = [char_1 char_2];
-      DI(1) = blockB(14);                      % DI - Decoder Identification
+      DI(4) = blockB(14);                      % DI - Decoder Identification
    elseif seg_addr == [ 0 1 ]
       naam(3:4) = [char_1 char_2];
-      DI(2) = blockB(14);
+      DI(3) = blockB(14);
    elseif seg_addr == [ 1 0 ]
       naam(5:6) = [char_1 char_2];
-      DI(3) = blockB(14);
+      DI(2) = blockB(14);
    elseif seg_addr == [ 1 1 ]
       naam(7:8) = [char_1 char_2];
-      DI(4) = blockB(14);
+      DI(1) = blockB(14);
    end
    % Decoder Identification 
    DId = decoder_identification(DId, DI);
    
 elseif (type(1:4) == [0 0 0 1 ])               % Group 1A and 1B Programme Item Numer and slow labelling codes 
     if type(5) == 0                            % Group 1A 
+        Groups(3)= Groups(3) + 1;
         % Get variant code
         variant_code = vbin2dec([0 0 0 0 0 blockC(2:4)]);
         
@@ -143,9 +147,12 @@ elseif (type(1:4) == [0 0 0 1 ])               % Group 1A and 1B Programme Item 
         Minute = vbin2dec([0 0 blockD(11:16)]);
         
         fprintf('Program Item Number\nDay = %d, Hour and Minute = %d:%d\n',Day,Hours,Minute);
+    else
+            Groups(4)= Groups(4) + 1;
     end
 elseif (type(1:4) == [0 0 1 0 ])               % Group 2A or 2B, contains RT
    if(type(5) == 0)                            % Group 2A
+   Groups(5)= Groups(5) + 1;
    % Get text segment address code
    text_seg = blockB(13:16);
    % and group A/B flag
@@ -165,17 +172,24 @@ elseif (type(1:4) == [0 0 1 0 ])               % Group 2A or 2B, contains RT
    chars = [char_1 char_2 char_3 char_4];
    
    [text1 text2] = locate_it(chars, text_seg, AB_flag, text1, text2);
-   else                                       % Group 2B
+   else                 %Group 2B
+   Groups(6)= Groups(6) + 1;
    end
 elseif (type(1:4) == [0 0 1 1])                     % Group 3A or 3B
     if type(5) == 0                            % Group 3A, Application identification for Open data
+        Groups(7)= Groups(7) + 1;
         % Get Application Group Type Code
         AGTC = blockB(12:16);
         
         % Get AID 
         AID = bin2hex(blockD(1:16));
         fprintf('AID=%s\n',AID);
-elseif (type == [0 1 0 0 0])                   % Group 4A, Clock-time & date
+    else
+        Groups(8)= Groups(8) + 1;
+    end
+elseif (type(1:4) == [0 1 0 0])                   % Groupa 4, Clock-time & date or ODA
+   if type(5) == 0                              % 4A
+    Groups(9)= Groups(9) + 1;
    % Get MJD
    MJD = vbin2dec24([0 0 0 0 0 0 0 blockB(15:16) blockC(1:15)]);   % Modified Julian Day code
    
@@ -195,10 +209,42 @@ elseif (type == [0 1 0 0 0])                   % Group 4A, Clock-time & date
    Hour = vbin2dec([0 0 0 blockC(16) blockD(1:4)]);
    Minutes = vbin2dec([0 0 blockD(5:10)]);
    LocalTimeOffset = (vbin2dec([0 0 0 blockD(12:16)]))/2;   % Local Time Offset multiplies of half hours within range -12h to 12h 
-    elseif type == [1 0 0 0 0 ]                % Group 8A, Open Data Application , TMC(Traffic Message Channel)
-        
-        
-elseif type == [1 0 1 0 0]                     % Group 10A, Programme Type Name
+   else
+       Groups(10)= Groups(10) + 1;
+   end
+    elseif type(1:4) == [0 1 0 1]             % Group 5A, Transparent Data Channels or ODA
+        if type(5) == 0
+            Groups(11)= Groups(11) + 1;
+        else
+            Groups(12)= Groups(11) + 1;
+        end
+    elseif type(1:4) == [0 1 1 0]             % Groups 6, In-House application or ODA
+        if type(5) == 0
+            Groups(13)= Groups(13) + 1;
+        else
+            Groups(14)= Groups(14) + 1;
+        end
+    elseif type(1:4) == [0 1 1 1]            % Groups 7, Radio Paging or ODA 
+        if type(5) == 0
+            Groups(15)= Groups(15) + 1;
+        else
+            Groups(16)= Groups(16) + 1;
+        end
+    elseif type(1:4) == [1 0 0 0]            % Groups 8, Open Data Application , TMC(Traffic Message Channel)
+        if type(5) == 0
+            Groups(17)= Groups(17) + 1;
+        else
+            Groups(18)= Groups(18) + 1;
+        end
+    elseif type(1:4) == [1 0 0 1]            % Groups 9, Emergency warning systems or ODA
+        if type(5) == 0
+            Groups(19)= Groups(19) + 1;
+        else
+            Groups(20)= Groups(20) + 1;
+        end
+elseif type(1:4) == [1 0 1 0 ]                     % Group 10A, Programme Type Name
+    if type(5) == 0
+        Groups(21)= Groups(21) + 1;
     % Get A/B flag, changed when new PTYN is being broadcasted
     ab_flag = blockB(12);
     % Get PTYN segment address
@@ -220,10 +266,39 @@ elseif type == [1 0 1 0 0]                     % Group 10A, Programme Type Name
     
     PTYN = locate_ptyn(PTYN, chars, prev_ab_flag, ab_flag, ptyn_seg, c);
     fprintf('PTYN=%s',PTYN);
+    else
+        Groups(22)= Groups(22) + 1;
+    end
+    elseif type(1:4) == [1 0 1 1]            % Groups 11, Open Data Application
+        if type(5) == 0
+            Groups(23)= Groups(23) + 1;
+        else
+            Groups(24)= Groups(24) + 1;
+        end
+    elseif type(1:4) ==[1 1 0 0]            % Groups 12, Open Data Application
+        if type(5) == 0
+            Groups(25)= Groups(25) + 1;
+        else
+            Groups(26)= Groups(26) + 1;
+        end
+    elseif type(1:4) == [1 1 0 1]            % Groups 13, Enhanced Radio Paging or ODA
+        if type(5) == 0
+            Groups(27)= Groups(27) + 1;
+        else
+            Groups(28)= Groups(28) + 1;
+        end
+    elseif type(1:4) == [1 1 1 0]            % Groups 14, Enhanced Other Networks information
+        if type(1:4) ==0
+            Groups(26) = Groups(29) + 1;
+        else
+            Groups(30)= Groups(30) + 1;
+        end
+    elseif type == [1 1 1 1 1]              % Group 15B, Fast basic tuning and switching information
+        Groups(32)= Groups(32) + 1;
 end  
 
-%zender = naam;
-%{
+zender = naam;
+
 fprintf('.');
 fprintf('\n');
 disp(zender);
@@ -239,6 +314,6 @@ fprintf('TP/TA = %s\n',Traffic);
 fprintf('Music/Speech switch = %s\n',MS);
 fprintf('Decoder Identification = %s, %s, %s, %s\n',DId{1},DId{2},DId{3},DId{4});
 fprintf('Country = %d\n', Country);
-%}
+
 end
    

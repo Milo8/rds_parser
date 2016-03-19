@@ -27,10 +27,9 @@ check = [ 1 0 0 0 0 0 0 0 0 0;
    1 1 1 0 0 0 1 1 1 1;
    1 1 0 0 0 1 1 0 1 1];
 % Load data
-  load rds_bits\FM_Radio_RDS1.txt;
-  data = FM_Radio_RDS1.';
-  clear FM_Radio_RDS1; %data = data(2:2:end);
-
+  load rds_bits\log_RDS_book.txt;
+  data = log_RDS_book.';
+  clear log_RDS_book; %data = data(2:2:end) 
 % data=data(13:end); % TZ test
 
 lengte = (length(data)-130);
@@ -41,7 +40,7 @@ disp('Processing data... Please be patient.');
 naam = 'xxxxxxxx';
 text1 = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
 text2 = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-AF = 0;
+AF = [] ;
 % Syndroms
 sA =  [1 1 1 1 0 1 1 0 0 0];
 sB =  [1 1 1 1 0 1 0 1 0 0];
@@ -49,8 +48,6 @@ sCa = [1 0 0 1 0 1 1 1 0 0];
 sCb = [1 1 1 1 0 0 1 1 0 0];
 sD =  [1 0 0 1 0 1 1 0 0 0];
 
-% Search for syndroms 
-% Bit-slip detection (for synchronisation)
 loper = 1;
 i = 1;
 AF = 0;    % Alternative Frequency vector;
@@ -68,6 +65,11 @@ Traffic = 0;
 MS = 0;
 DI = [0 0 0 0];
 Country = 0;
+Groups = zeros(1,32);
+
+% Search for syndroms 
+% Bit-slip detection (for synchronisation)
+
 while (loper < lengte)
    resultaat = syndrome(loper, data, check);
    if (resultaat == sA)
@@ -79,8 +81,8 @@ while (loper < lengte)
          if (resultaat == sCa)                      % Block Ca found
             resultaat = syndrome (loper + 78, data, check);
             if (resultaat == sD)                    % Complete group read
-               [naam, text1, text2,i,AF,N,Hour,Minutes,LocalTimeOffset,Y,M,Day,PI,PTY,Traffic,MS,DI,Country] = process(loper, data, naam, text1, text2,i,AF,N, ...
-                                                                                            Hour,Minutes,LocalTimeOffset,Y,M,Day,PI,PTY,Traffic,MS,DI,Country);                % Verwerk
+               [naam, text1, text2,i,AF,N,Hour,Minutes,LocalTimeOffset,Y,M,Day,PI,PTY,Traffic,MS,DI,Country,Groups] = process(loper, data, naam, text1, text2,i,AF,N, ...
+                                                                                            Hour,Minutes,LocalTimeOffset,Y,M,Day,PI,PTY,Traffic,MS,DI,Country,Groups);                % Verwerk
                loper = loper + 103;                 % increment loper
             end
          elseif (resultaat == sCb)                  % Block Cb
@@ -95,3 +97,4 @@ while (loper < lengte)
    loper = loper + 1;
 end
 
+disp_groups(Groups);
