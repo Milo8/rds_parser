@@ -29,7 +29,7 @@ check = [ 1 0 0 0 0 0 0 0 0 0;
 % Load data
   load rds_bits\log_RDS_book.txt;
   data = log_RDS_book.';
-  clear log_RDS_book; %data = data(2:2:end) 
+  clear log_RDS_book ; %data = data(2:2:end) 
 % data=data(13:end); % TZ test
 
 lengte = (length(data)-130);

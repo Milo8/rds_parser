@@ -192,7 +192,7 @@ elseif (type(1:4) == [0 1 0 0])                   % Groupa 4, Clock-time & date 
     Groups(9)= Groups(9) + 1;
    % Get MJD
    MJD = vbin2dec24([0 0 0 0 0 0 0 blockB(15:16) blockC(1:15)]);   % Modified Julian Day code
-   
+  
    % MJD to YYYY:MM:DD conversion method Annex G
    Y = fix((MJD-15078.2)/365.25);
    M =  fix((MJD - 14956.1 - fix((Y*365.25)))/30.6001);
